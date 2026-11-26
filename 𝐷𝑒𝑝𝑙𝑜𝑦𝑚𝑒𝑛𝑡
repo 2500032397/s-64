@@ -1,0 +1,269 @@
+Below is your NovaBank Online Banking System converted into React.js.
+
+I've converted the HTML, CSS, and JavaScript into React components using:
+
+- JSX instead of HTML.
+- `useState` for login, navigation, transactions, and loan management.
+- React event handlers instead of inline JavaScript.
+- React conditional rendering for User and Admin dashboards.
+- CSS styling to maintain your original NovaBank design.
+- `localStorage` for demo login-session persistence.
+
+## 1. Project setup
+
+Create a React project using Vite:
+
+bash
+
+```bash
+npm create vite@latest novabank -- --template react
+cd novabank
+npm install
+npm run dev
+```
+
+## 2. Project structure
+
+text
+
+```text
+novabank/
+│
+├── src/
+│   ├── App.jsx
+│   ├── App.css
+│   ├── main.jsx
+│   │
+│   └── components/
+│       ├── Login.jsx
+│       ├── UserDashboard.jsx
+│       └── AdminDashboard.jsx
+│
+├── index.html
+└── package.json
+```
+
+## 3. App.jsx
+
+This is the main React application. It handles login, logout, and switching between user and administrator dashboards.
+
+jsx
+
+```jsx
+
+import React, { useState, useEffect } from "react";
+import "./App.css";
+
+const initialUsers = [
+  { id: "2500032397", name: "Saishashank", email: "saishashank@example.com", account: "Savings", status: "Active" },
+  { id: "2500032401", name: "Rahul", email: "rahul@example.com", account: "Current", status: "Active" },
+  { id: "2500032402", name: "Priya", email: "priya@example.com", account: "Savings", status: "Active" },
+  { id: "2500032403", name: "Arjun", email: "arjun@example.com", account: "Savings", status: "Blocked" }
+];
+
+const initialLoans = [
+  { id: "LN1001", user: "Saishashank", type: "Education Loan", amount: 1000000, status: "Pending" },
+  { id: "LN1002", user: "Rahul", type: "Personal Loan", amount: 500000, status: "Pending" },
+  { id: "LN1003", user: "Priya", type: "Home Loan", amount: 5000000, status: "Pending" }
+];
+
+const initialTransactions = [
+  { id: "TXN10234", description: "Salary Credit", date: "27 Aug 2026", type: "Credit", amount: 45000, status: "Completed" },
+  { id: "TXN10233", description: "Amazon Purchase", date: "28 Aug 2026", type: "Debit", amount: 2499, status: "Completed" },
+  { id: "TXN10232", description: "Electricity Bill", date: "25 Aug 2026", type: "Debit", amount: 1240, status: "Completed" },
+  { id: "TXN10231", description: "UPI Transfer", date: "24 Aug 2026", type: "Debit", amount: 800, status: "Pending" }
+];
+
+const money = (amount) =>
+  "₹" + Number(amount).toLocaleString("en-IN");
+
+function App() {
+  const [role, setRole] = useState(localStorage.getItem("novaBankRole") || "");
+  const [customer, setCustomer] = useState(localStorage.getItem("novaBankUser") || "");
+  const [loginRole, setLoginRole] = useState("user");
+  const [customerId, setCustomerId] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [userPage, setUserPage] = useState("dashboard");
+  const [adminPage, setAdminPage] = useState("adminDashboard");
+
+  const [users, setUsers] = useState(initialUsers);
+  const [loans, setLoans] = useState(initialLoans);
+  const [transactions, setTransactions] = useState(initialTransactions);
+
+  const [balance, setBalance] = useState(125450);
+  const [currentBalance, setCurrentBalance] = useState(23300);
+
+  const [beneficiary, setBeneficiary] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [ifsc, setIfsc] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [remarks, setRemarks] = useState("");
+
+  const [billCategory, setBillCategory] = useState("Electricity");
+  const [consumerNumber, setConsumerNumber] = useState("");
+  const [billAmount, setBillAmount] = useState("");
+
+  const [filter, setFilter] = useState("All Transactions");
+
+  useEffect(() => {
+    if (role === "user" || role === "admin") {
+      localStorage.setItem("novaBankRole", role);
+    }
+  }, [role]);
+
+  const login = () => {
+    if (!customerId.trim() || !password) {
+      alert("Please enter ID and Password.");
+      return;
+    }
+
+    if (loginRole === "admin") {
+      if (customerId === "admin" && password === "admin123") {
+        setRole("admin");
+        localStorage.setItem("novaBankRole", "admin");
+      } else {
+        alert("Invalid Admin ID or Password.");
+      }
+      return;
+    }
+
+    setCustomer(customerId);
+    setRole("user");
+    localStorage.setItem("novaBankRole", "user");
+    localStorage.setItem("novaBankUser", customerId);
+  };
+
+  const logout = () => {
+    localStorage.removeItem("novaBankRole");
+    localStorage.removeItem("novaBankUser");
+    setRole("");
+    setCustomer("");
+    setCustomerId("");
+    setPassword("");
+  };
+
+  const transferMoney = () => {
+    const amount = Number(transferAmount);
+
+    if (!beneficiary.trim() || !accountNumber.trim() ||
+        !ifsc.trim() || !transferAmount) {
+      alert("Please fill all required fields.");
+      return;
+    }
+
+    if (!/^\d{9,18}$/.test(accountNumber.trim()) ||
+        !/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/.test(ifsc.trim())) {
+      alert("Please enter valid demo account details.");
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert("Enter a valid amount.");
+      return;
+    }
+
+    if (amount > balance) {
+      alert("Insufficient balance.");
+      return;
+    }
+
+    setBalance(prev => prev - amount);
+
+    const txn = {
+      id: "TXN" + Date.now(),
+      description: `Transfer to ${beneficiary}`,
+      date: new Date().toLocaleDateString("en-IN"),
+      type: "Debit",
+      amount,
+      status: "Completed"
+    };
+
+    setTransactions(prev => [txn, ...prev]);
+
+    alert(
+      `Demo Transfer Successful!\nBeneficiary: ${beneficiary}\nAmount: ${money(amount)}\nTransaction ID: ${txn.id}`
+    );
+
+    setBeneficiary("");
+    setAccountNumber("");
+    setIfsc("");
+    setTransferAmount("");
+    setRemarks("");
+  };
+
+  const payBill = () => {
+    const amount = Number(billAmount);
+
+    if (!consumerNumber.trim() || !billAmount) {
+      alert("Please fill all required fields.");
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert("Enter a valid amount.");
+      return;
+    }
+
+    if (amount > balance) {
+      alert("Insufficient balance.");
+      return;
+    }
+
+    setBalance(prev => prev - amount);
+
+    setTransactions(prev => [{
+      id: "TXN" + Date.now(),
+      description: `${billCategory} Bill`,
+      date: new Date().toLocaleDateString("en-IN"),
+      type: "Debit",
+      amount,
+      status: "Completed"
+    }, ...prev]);
+
+    alert("Demo bill payment successful!");
+
+    setConsumerNumber("");
+    setBillAmount("");
+  };
+
+  const applyLoan = (type) => {
+    const loan = {
+      id: "LN" + Date.now(),
+      user: customer || "Customer",
+      type,
+      amount: 0,
+      status: "Pending"
+    };
+
+    setLoans(prev => [...prev, loan]);
+    alert(`${type} application submitted successfully!`);
+  };
+
+  const updateLoan = (id, status) => {
+    setLoans(prev =>
+      prev.map(loan =>
+        loan.id === id ? { ...loan, status } : loan
+      )
+    );
+  };
+
+  const deleteUser = (id) => {
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      setUsers(prev => prev.filter(user => user.id !== id));
+    }
+  };
+
+  const userNavigation = [
+    ["dashboard", "🏠", "Dashboard"],
+    ["accounts", "💳", "My Accounts"],
+    ["transfer", "💸", "Transfer"],
+    ["transactions", "📊", "Transactions"],
+    ["bills", "🧾", "Bill Payments"],
+    ["loans", "🏦", "Loans"],
+    ["profile", "👤", "Profile"]
+  ];
+
+  const adminNavigation = [
+    ["adminDashboard", "📊", "Dashboard
+```
